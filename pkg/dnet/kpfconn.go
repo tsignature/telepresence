@@ -225,7 +225,7 @@ func (pf *k8sPortForwardDialer) spdyStream(pod *kates.Pod) (httpstream.Connectio
 }
 
 func (pf *k8sPortForwardDialer) dial(ctx context.Context, pod *kates.Pod, port uint16) (conn *kpfConn, err error) {
-	dlog.Debugf(pf.logCtx, "k8sPortForwardDialer.dial(ctx, %s.%s, %d)",
+	dlog.Debugf(pf.logCtx, "k8sPortForwardDialer.dial(ctx, Pod./%s.%s, %d)",
 		pod.Name,
 		pod.Namespace,
 		port)
