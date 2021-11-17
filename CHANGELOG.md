@@ -13,6 +13,10 @@
 
 - Bugfix: Fixed a potential deadlock when a new agent joined the traffic manager.
 
+- Bugfix: The tunneled network connections between Telepresence and
+  Ambassador Cloud now behave more like ordinary TCP connections,
+  especially around timeouts.
+
 ### 2.4.6 (November 2, 2021)
 
 - Feature: Telepresence CLI is now built and published for Apple silicon Macs.
