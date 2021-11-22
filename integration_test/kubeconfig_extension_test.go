@@ -13,6 +13,8 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd/api"
 
+	"github.com/datawire/dlib/dexec"
+	"github.com/datawire/dlib/dlog"
 	"github.com/datawire/dlib/dtime"
 	"github.com/telepresenceio/telepresence/v2/integration_test/itest"
 	"github.com/telepresenceio/telepresence/v2/pkg/filelocation"
@@ -131,6 +133,8 @@ func (s *notConnectedSuite) Test_ConflictingProxies() {
 				return itest.Run(ctx, "curl", "--silent", "-k", "--max-time", "0.5", "https://kubernetes.default:443") == nil
 			}, 15*time.Second, 2*time.Second, "cluster is not connected")
 			newRoute, err := routing.GetRoute(ctx, testIP)
+			out, _ := dexec.CommandContext(ctx, "route", "print").Output()
+			dlog.Info(ctx, string(out))
 			if t.expectEq {
 				if originalRoute.Interface != nil {
 					require.NotNil(newRoute.Interface)
