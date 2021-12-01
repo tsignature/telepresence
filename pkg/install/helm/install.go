@@ -131,10 +131,12 @@ func uninstallExisting(ctx context.Context, helmConfig *action.Configuration, na
 // EnsureTrafficManager ensures the traffic manager is installed
 func EnsureTrafficManager(ctx context.Context, configFlags *kates.ConfigFlags, client *kates.Client, namespace string) error {
 	helmConfig, err := getHelmConfig(ctx, configFlags, namespace)
+	//dlog.Info(ctx, "helmConfig:-->", helmConfig)
 	if err != nil {
 		return fmt.Errorf("failed to initialize helm config: %w", err)
 	}
 	existing, err := getHelmRelease(ctx, helmConfig)
+	//dlog.Info(ctx, "existing release:-->", existing)
 	if err != nil {
 		// If we weren't able to get the helm release at all, there's no hope for installing it
 		// This could have happened because the user doesn't have the requisite permissions, or because there was some

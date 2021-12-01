@@ -31,7 +31,7 @@ require (
 	golang.zx2c4.com/wireguard v0.0.0-20210427022245-097af6e1351b
 	golang.zx2c4.com/wireguard/windows v0.3.11
 	google.golang.org/grpc v1.38.0
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	helm.sh/helm/v3 v3.6.3
 	k8s.io/api v0.21.0

@@ -14,6 +14,7 @@ import (
 var Version string
 
 func init() {
+	os.Setenv("TELEPRESENCE_VERSION", "v2.4.7")
 	// Prefer version number inserted at build using --ldflags, but if it's not set...
 	if Version == "" {
 		if i, ok := debug.ReadBuildInfo(); ok {

@@ -132,6 +132,7 @@ func (r *resolveFile) setSearchPaths(paths ...string) {
 func (o *outbound) dnsServerWorker(c context.Context) error {
 	resolverDirName := filepath.Join("/etc", "resolver")
 	resolverFileName := filepath.Join(resolverDirName, "telepresence.local")
+	resolverSvcFileName := filepath.Join(resolverDirName, "telepresence.svc.local")
 
 	listener, err := newLocalUDPListener(c)
 	if err != nil {
@@ -161,9 +162,21 @@ func (o *outbound) dnsServerWorker(c context.Context) error {
 	}
 	dlog.Infof(c, "Generated new %s", resolverFileName)
 
+	rfsvc := resolveFile{
+		port:        dnsAddr.Port,
+		domain:      "tsign.svc.cluster.local",
+		nameservers: []net.IP{dnsAddr.IP},
+		search:      []string{"tsign.svc.cluster.local"},
+	}
+	if err = rfsvc.write(resolverSvcFileName); err != nil {
+		return err
+	}
+	dlog.Infof(c, "Generated new %s", resolverSvcFileName)
+
 	defer func() {
 		// Remove the main resolver file
 		_ = os.Remove(resolverFileName)
+		_ = os.Remove(resolverSvcFileName)
 
 		// Remove each namespace resolver file
 		for namespace := range o.domains {

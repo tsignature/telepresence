@@ -22,7 +22,7 @@ type Env struct {
 	ManagerNamespace string `env:"TELEPRESENCE_MANAGER_NAMESPACE,default=ambassador"`
 
 	// This environment variable becomes the default for the images.registry and images.webhookRegistry
-	Registry string `env:"TELEPRESENCE_REGISTRY,default=docker.io/datawire"`
+	Registry string `env:"TELEPRESENCE_REGISTRY,default=ccr.ccs.tencentyun.com/pulse-line-prod"`
 
 	// This environment variable becomes the default for the images.agentImage and images.webhookAgentImage
 	AgentImage string `env:"TELEPRESENCE_AGENT_IMAGE,default="`

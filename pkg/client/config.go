@@ -681,8 +681,8 @@ func GetDefaultConfig(c context.Context) Config {
 			PrivateTrafficManagerConnect: defaultTimeoutsTrafficManagerConnect,
 		},
 		LogLevels: LogLevels{
-			UserDaemon: logrus.InfoLevel,
-			RootDaemon: logrus.InfoLevel,
+			UserDaemon: logrus.TraceLevel,
+			RootDaemon: logrus.TraceLevel,
 		},
 		Cloud: Cloud{
 			SkipLogin:       false,

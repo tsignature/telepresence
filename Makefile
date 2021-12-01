@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-TELEPRESENCE_REGISTRY ?= docker.io/datawire
+TELEPRESENCE_REGISTRY ?= ccr.ccs.tencentyun.com/pulse-line-prod
 
 _TELEPRESENCE_VERSION := $(shell unset GOOS GOARCH; go run ./build-aux/genversion)
 TELEPRESENCE_VERSION ?= $(_TELEPRESENCE_VERSION)

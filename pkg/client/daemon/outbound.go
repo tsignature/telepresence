@@ -112,6 +112,9 @@ func (o *outbound) shouldDoClusterLookup(query string) bool {
 }
 
 func (o *outbound) resolveInCluster(c context.Context, query string) (results []net.IP) {
+	if !strings.Contains(query, "localhost") {
+		dlog.Infof(c, "resolveQuery q:%s", query)
+	}
 	query = strings.ToLower(query)
 	query = strings.TrimSuffix(query, tel2SubDomainDot)
 

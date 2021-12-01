@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/datawire/dlib/dlog"
 	"net"
 	"os"
 	"runtime"
@@ -112,6 +113,7 @@ func (t *Device) setMTU(mtu int) error {
 }
 
 func (t *Device) readPacket(into *buffer.Data) (int, error) {
+	dlog.Info(context.Background(), "readPacket>>>>>name:", t.name, "into:", string(into.Raw()))
 	n, err := t.File.Read(into.Raw())
 	if n >= buffer.PrefixLen {
 		n -= buffer.PrefixLen
@@ -120,6 +122,7 @@ func (t *Device) readPacket(into *buffer.Data) (int, error) {
 }
 
 func (t *Device) writePacket(from *buffer.Data, offset int) (n int, err error) {
+	dlog.Info(context.Background(), "name:", t.name, "from:", string(from.Raw()))
 	raw := from.Raw()
 	if len(raw) <= buffer.PrefixLen {
 		return 0, unix.EIO
