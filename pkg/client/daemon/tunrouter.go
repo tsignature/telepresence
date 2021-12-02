@@ -450,7 +450,6 @@ func (t *tunRouter) run(c context.Context) error {
 	})
 
 	g.Go("TUN reader", func(c context.Context) error {
-		dlog.Info(c, "Waiting until manager gRPC is configured")
 		select {
 		case <-c.Done():
 			return nil
@@ -466,7 +465,6 @@ func (t *tunRouter) run(c context.Context) error {
 
 		go func() {
 			for data := range bufCh {
-				dlog.Info(c, "to handlePacket-----> data :", string(data.Raw()))
 				t.handlePacket(c, data)
 			}
 		}()
@@ -507,10 +505,7 @@ func (t *tunRouter) handlePacket(c context.Context, data *buffer.Data) {
 			dlog.Errorf(c, "TUN write failed: %v", err)
 		}
 	}
-
-	dlog.Info(c, "handlePacket:", string(data.Raw()))
 	ipHdr, err := ip.ParseHeader(data.Buf())
-	dlog.Info(c, "handlePacket ipHdr:", ipHdr.Destination())
 	if err != nil {
 		dlog.Error(c, "Unable to parse packet header")
 		return
@@ -537,13 +532,10 @@ func (t *tunRouter) handlePacket(c context.Context, data *buffer.Data) {
 
 	switch ipHdr.L4Protocol() {
 	case ipproto.TCP:
-		dlog.Info(c, "handlePacket ipproto.TCP --------------------")
 		t.tcp(c, tcp.PacketFromData(ipHdr, data))
 		data = nil
 	case ipproto.UDP:
 		dst := ipHdr.Destination()
-		dlog.Info(c, "handlePacket ipproto.UDP --------------------")
-		dlog.Info(c, "handlePacket ipproto.UDP dst:---", dst, "IsGlobalUnicast:", dst.IsGlobalUnicast())
 		if !dst.IsGlobalUnicast() {
 			// Just ignore at this point.
 			return
@@ -562,18 +554,13 @@ func (t *tunRouter) handlePacket(c context.Context, data *buffer.Data) {
 			return
 		}
 		data = nil
-		dlog.Info(c, "dg:--------------------", dg)
 		t.udp(c, dg)
 	case ipproto.ICMP:
-		dlog.Info(c, "ipproto.ICMP:--------------------")
 	case ipproto.ICMPV6:
-		dlog.Info(c, "ipproto.ICMPV6:--------------------")
 		pkt := icmp.PacketFromData(ipHdr, data)
 		dlog.Tracef(c, "<- TUN %s", pkt)
 	default:
 		// An L4 protocol that we don't handle.
-		dlog.Info(c, "ipproto.default:--------------------:", ipHdr.L4Protocol())
-		dlog.Tracef(c, "Unhandled protocol %d", ipHdr.L4Protocol())
 		reply(icmp.DestinationUnreachablePacket(ipHdr, icmp.ProtocolUnreachable))
 	}
 }
@@ -603,14 +590,12 @@ func (w vifWriter) Write(ctx context.Context, pkt ip.Packet) (err error) {
 func (t *tunRouter) tcp(c context.Context, pkt tcp.Packet) {
 	ipHdr := pkt.IPHeader()
 	tcpHdr := pkt.Header()
-	dlog.Info(c, "begin tcp:--------------------:iphdr:", ipHdr, "tcpHdr:", tcpHdr, "pkt:", pkt)
 	connID := tunnel.NewConnID(ipproto.TCP, ipHdr.Source(), ipHdr.Destination(), tcpHdr.SourcePort(), tcpHdr.DestinationPort())
 	dlog.Tracef(c, "<- TUN %s", pkt)
 	if !tcpHdr.SYN() {
 		// Only a SYN packet can create a new connection. For all other packets, the connection must already exist
 		wf := t.handlers.Get(connID)
 		if wf == nil {
-			dlog.Info(c, "begin tcp:--------------------: tcpHdr.SYN ----wf is nil")
 			pkt.Release()
 		} else {
 			dlog.Info(c, "begin tcp:--------------------: tcpHdr.SYN ----pkt：", pkt)

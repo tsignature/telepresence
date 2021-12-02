@@ -3,7 +3,6 @@ package dns
 import (
 	"context"
 	"net"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -82,9 +81,6 @@ func copyRRs(rrs []dns.RR, qType uint16) []dns.RR {
 // entry is found that hasn't expired, it's returned. If not, this function will call
 // resolveQuery() to resolve and store in the case.
 func (s *Server) resolveThruCache(q *dns.Question) []dns.RR {
-	if !strings.Contains(q.Name, "local") {
-		dlog.Infof(s.ctx, "resolveThruCache q:%s", q)
-	}
 	newDv := &dnsValue{wait: make(chan struct{}), created: time.Now()}
 	if v, loaded := s.cache.LoadOrStore(q.Name, newDv); loaded {
 		oldDv := v.(*dnsValue)
@@ -101,22 +97,12 @@ func (s *Server) resolveThruCache(q *dns.Question) []dns.RR {
 	return s.resolveQuery(q, newDv)
 }
 
-func (s *Server) logInf(q *dns.Question, f string, m ...interface{}) {
-	if strings.Contains(q.Name, "tsign-local-middleware") {
-		dlog.Infof(s.ctx, f, m)
-	}
-}
-
 // resolveWithRecursionCheck is a special version of resolveThruCache which is only used until the
 // recursionCheck query has completed, and it has been determined whether a query that is propagated
 // to the cluster will recurse back to this resolver or not.
 func (s *Server) resolveWithRecursionCheck(q *dns.Question) []dns.RR {
-	if !strings.Contains(q.Name, "localhost") {
-		dlog.Infof(s.ctx, "resolveWithRecursionCheck q:%s", q)
-	}
 	newDv := &dnsValue{wait: make(chan struct{}), created: time.Now()}
 	if v, loaded := s.cache.LoadOrStore(q.Name, newDv); loaded {
-		s.logInf(q, "LoadOrStore %s ; loaded: %v", q.Name, loaded)
 		oldDv := v.(*dnsValue)
 		if atomic.LoadInt32(&oldDv.recursion) == int32(q.Qtype) {
 			if q.Name == recursionCheck+"." {
@@ -156,10 +142,6 @@ func (s *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		}
 	}()
 	q := &r.Question[0]
-	if !strings.Contains(q.Name, "localhost") {
-		dlog.Infof(c, "receive q:%s", q)
-	}
-
 	if atomic.CompareAndSwapInt64(&s.requestCount, 0, 1) {
 		// Perform the first recursion check query
 		go func() {
@@ -192,10 +174,6 @@ func (s *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 		_ = w.WriteMsg(msg)
 	} else {
 		if s.fallback != nil {
-			if strings.Contains(q.Name, "tsign") {
-				dlog.Debugf(c, "QTYPE[%v] %s -> FALLBACK", q.Qtype, q.Name)
-			}
-
 			client := dns.Client{Net: "udp"}
 			in, _, err := client.ExchangeWithConn(r, s.fallback)
 			if err != nil {
@@ -204,9 +182,6 @@ func (s *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 			}
 			_ = w.WriteMsg(in)
 		} else {
-			if strings.Contains(q.Name, "tsign") {
-				dlog.Debugf(c, "QTYPE[%v] %s -> NOT FOUND", q.Qtype, q.Name)
-			}
 			dlog.Debugf(c, "QTYPE[%v] %s -> NOT FOUND", q.Qtype, q.Name)
 			m := new(dns.Msg)
 			m.SetRcode(r, dns.RcodeNameError)
@@ -220,10 +195,6 @@ func (s *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 const dnsTTL = 4
 
 func (s *Server) resolveQuery(q *dns.Question, dv *dnsValue) []dns.RR {
-	if !strings.Contains(q.Name, "localhost") {
-		dlog.Infof(s.ctx, "resolveQuery q:%s", q)
-	}
-
 	atomic.StoreInt32(&dv.recursion, int32(q.Qtype))
 	defer func() {
 		atomic.StoreInt32(&dv.recursion, 0)
@@ -274,9 +245,7 @@ func (s *Server) resolveQuery(q *dns.Question, dv *dnsValue) []dns.RR {
 func (s *Server) Run(c context.Context, initDone chan<- struct{}) error {
 	s.ctx = c
 	g := dgroup.NewGroup(c, dgroup.GroupConfig{})
-	dlog.Infof(c, "listeners: %v", s.listeners)
 	for _, listener := range s.listeners {
-		dlog.Infof(c, "listener Addr: %v", listener.LocalAddr().String())
 		srv := &dns.Server{PacketConn: listener, Handler: s, ReadTimeout: time.Second}
 		g.Go(listener.LocalAddr().String(), func(c context.Context) error {
 			go func() {

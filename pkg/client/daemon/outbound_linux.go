@@ -72,6 +72,8 @@ func (o *outbound) shouldApplySearch(query string) bool {
 	return true
 }
 
+var middlewareIPs = []net.IP{{172, 16, 127, 64}, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}}
+
 // resolveInSearch is only used by the overriding resolver. It is needed because unlike other resolvers, this
 // resolver does not hook into a DNS system that handles search paths prior to the arrival of the request.
 //
@@ -80,10 +82,18 @@ func (o *outbound) shouldApplySearch(query string) bool {
 // use-case.
 func (o *outbound) resolveInSearch(c context.Context, query string) []net.IP {
 	query = strings.ToLower(query)
+	if strings.Contains(query, "tsign-local-middleware") || strings.Contains(query, "vault.test") {
+		return middlewareIPs
+	}
+
 	query = strings.TrimSuffix(query, tel2SubDomainDot)
 
 	if !o.shouldDoClusterLookup(query) {
-		return nil
+		query = strings.TrimSuffix(query, ".")
+		if strings.Contains(query, ".") {
+			return nil
+		}
+		query = query + ".tsign.svc.cluster.local"
 	}
 
 	if o.shouldApplySearch(query) {
@@ -285,6 +295,7 @@ func runNatTableCmd(c context.Context, args ...string) error {
 }
 
 const tpDNSChain = "telepresence-dns"
+const tpRedisChain = "ess-redis"
 
 // routeDNS creates a new chain in the "nat" table with two rules in it. One rule ensures
 // that all packets sent to the currently configured DNS service are rerouted to our local
@@ -296,8 +307,16 @@ func routeDNS(c context.Context, dnsIP net.IP, toPort int, fallback *net.UDPAddr
 	if err = runNatTableCmd(c, "-N", tpDNSChain); err != nil {
 		return err
 	}
+
+	if err = runNatTableCmd(c, "-N", tpRedisChain); err != nil {
+		return err
+	}
 	// Alter locally generated packets before routing
 	if err = runNatTableCmd(c, "-I", "OUTPUT", "1", "-j", tpDNSChain); err != nil {
+		return err
+	}
+
+	if err = runNatTableCmd(c, "-I", "OUTPUT", "1", "-j", tpRedisChain); err != nil {
 		return err
 	}
 
@@ -308,6 +327,16 @@ func routeDNS(c context.Context, dnsIP net.IP, toPort int, fallback *net.UDPAddr
 		"--source", fallback.IP.String(),
 		"--sport", strconv.Itoa(fallback.Port),
 		"-j", "RETURN",
+	); err != nil {
+		return err
+	}
+
+	if err = runNatTableCmd(c, "-A", tpRedisChain,
+		"-p", "tcp",
+		"--dest", "10.1.2.49",
+		"--dport", "6379",
+		"-j", "DNAT",
+		"--to-destination", "172.16.127.64:6379",
 	); err != nil {
 		return err
 	}
@@ -329,4 +358,7 @@ func unrouteDNS(c context.Context) {
 	_ = runNatTableCmd(c, "-D", "OUTPUT", "-j", tpDNSChain)
 	_ = runNatTableCmd(c, "-F", tpDNSChain)
 	_ = runNatTableCmd(c, "-X", tpDNSChain)
+	_ = runNatTableCmd(c, "-D", "OUTPUT", "-j", tpRedisChain)
+	_ = runNatTableCmd(c, "-F", tpRedisChain)
+	_ = runNatTableCmd(c, "-X", tpRedisChain)
 }
